@@ -15,11 +15,12 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 interface AuthContextType {
   currentUser: User | null;
   userProfile: UserProfile | null;
+  loading: boolean;
   signup: (
     email: string,
     password: string,
     userType: "business" | "influencer",
-    additionalInfo: any
+    additionalInfo: AdditionalInfo
   ) => Promise<void>;
   login: (email: string, password: string) => Promise<UserCredential>;
   logout: () => Promise<void>;
@@ -34,7 +35,15 @@ interface UserProfile {
   businessType?: string;
   category?: string;
   location?: string;
-  bio?: string; // Make bio optional
+  bio?: string;
+}
+
+interface AdditionalInfo {
+  displayName: string;
+  category?: string;
+  businessType?: string;
+  location: string;
+  bio?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,69 +65,83 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
     userType: "business" | "influencer",
-    additionalInfo: {
-      displayName: string;
-      category?: string;
-      businessType?: string;
-      location: string;
-      bio?: string;
-    }
+    additionalInfo: AdditionalInfo
   ) {
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-    const user = userCredential.user;
-
-    // Ensure category is not undefined
-    const userProfile: UserProfile = {
-      uid: user.uid,
-      email: user.email!,
-      userType,
-      displayName: additionalInfo.displayName,
-      category:
-        userType === "business"
-          ? additionalInfo.businessType || "Not specified"
-          : additionalInfo.category,
-      location: additionalInfo.location,
-      bio: additionalInfo.bio || "", // Optional bio, defaults to an empty string if not provided
-    };
-
     try {
-      // Set user profile in Firestore
-      await setDoc(doc(db, "userProfiles", user.uid), userProfile);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
 
-      // Set local user profile state (if needed)
+      const userProfile: UserProfile = {
+        uid: user.uid,
+        email: user.email!,
+        userType,
+        displayName: additionalInfo.displayName,
+        category:
+          userType === "business"
+            ? additionalInfo.businessType || "Not specified"
+            : additionalInfo.category,
+        location: additionalInfo.location,
+        bio: additionalInfo.bio || "",
+      };
+
+      await setDoc(doc(db, "userProfiles", user.uid), userProfile);
       setUserProfile(userProfile);
     } catch (error) {
-      console.error("Error creating user profile in Firestore: ", error);
+      console.error("Error in signup:", error);
+      throw error;
     }
   }
 
-  function login(email: string, password: string) {
-    return signInWithEmailAndPassword(auth, email, password);
+  async function login(email: string, password: string) {
+    try {
+      return await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error("Error in login:", error);
+      throw error;
+    }
   }
 
-  function logout() {
-    return signOut(auth);
+  async function logout() {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error in logout:", error);
+      throw error;
+    }
   }
 
   async function updateProfile(profileData: Partial<UserProfile>) {
-    if (currentUser) {
+    if (!currentUser) {
+      throw new Error("No user is currently logged in");
+    }
+    try {
       await updateDoc(doc(db, "userProfiles", currentUser.uid), profileData);
       setUserProfile((prevProfile) => ({ ...prevProfile!, ...profileData }));
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      throw error;
     }
   }
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      setLoading(true);
       if (user) {
-        const docRef = doc(db, "userProfiles", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setUserProfile(docSnap.data() as UserProfile);
+        try {
+          const docRef = doc(db, "userProfiles", user.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setUserProfile(docSnap.data() as UserProfile);
+          } else {
+            console.warn("No user profile found for the current user");
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
         }
       } else {
         setUserProfile(null);
@@ -129,18 +152,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const value = {
+  const value: AuthContextType = {
     currentUser,
     userProfile,
+    loading,
     signup,
     login,
     logout,
     updateProfile,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

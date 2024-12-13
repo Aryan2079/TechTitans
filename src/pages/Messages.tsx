@@ -107,6 +107,10 @@ export function Messages() {
           participants: [currentUser.uid, otherUser.uid],
           lastMessage: messageText,
           timestamp: Timestamp.now(),
+          participantNames: {
+            [currentUser.uid]: currentUser.displayName,
+            [otherUser.uid]: otherUser.displayName,
+          },
         });
       } else {
         // Update the last message and timestamp in the chat document
@@ -116,7 +120,7 @@ export function Messages() {
         });
       }
 
-      // Add the new message
+      // Add the new message to the messages collection
       const newMessage = {
         text: messageText,
         timestamp: Timestamp.now(),

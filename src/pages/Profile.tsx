@@ -28,9 +28,10 @@ export function Profile() {
   const [formData, setFormData] = useState<FormData>({
     displayName: userProfile?.displayName || "",
     location: userProfile?.location || "",
-    ...(userProfile?.userType === "business"
-      ? { businessType: userProfile?.businessType || "" }
-      : { category: userProfile?.category || "" }),
+    // Use 'category' for both, but set it as 'businessType' for business users
+    businessType:
+      userProfile?.userType === "business" ? userProfile?.category : "",
+    category: userProfile?.userType !== "business" ? userProfile?.category : "",
     bio: userProfile?.bio || "",
   });
 
@@ -178,7 +179,7 @@ export function Profile() {
                     </Label>
                     <p className="text-lg">
                       {userProfile?.userType === "business"
-                        ? userProfile?.businessType
+                        ? userProfile?.category // Use category for business
                         : userProfile?.category}
                     </p>
                   </div>
