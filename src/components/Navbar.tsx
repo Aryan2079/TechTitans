@@ -20,14 +20,20 @@ export function Navbar() {
         <Link to="/" className="text-2xl font-bold text-primary">
           BizInfluence
         </Link>
-        <div className="space-x-4">
+        <div className="flex items-center space-x-4">
           {currentUser ? (
             <>
+              <Link to="/dashboard">
+                <Button variant="ghost">Dashboard</Button>
+              </Link>
               <Link to="/search">
                 <Button variant="ghost">Search</Button>
               </Link>
               <Link to="/messages">
                 <Button variant="ghost">Messages</Button>
+              </Link>
+              <Link to="/profile">
+                <Button variant="ghost">Profile</Button>
               </Link>
               <Button onClick={handleLogout}>Logout</Button>
             </>

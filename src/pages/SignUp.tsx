@@ -18,6 +18,10 @@ export function SignUp() {
   const [userType, setUserType] = useState("business");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [businessType, setBusinessType] = useState("");
+  const [category, setCategory] = useState("");
+  const [location, setLocation] = useState("");
   const [error, setError] = useState("");
   const { signup } = useAuth();
   const navigate = useNavigate();
@@ -27,8 +31,17 @@ export function SignUp() {
     setError("");
 
     try {
-      await signup(email, password);
-      navigate("/");
+      const additionalInfo =
+        userType === "business"
+          ? { displayName, businessType, location }
+          : { displayName, category, location };
+      await signup(
+        email,
+        password,
+        userType as "business" | "influencer",
+        additionalInfo
+      );
+      navigate("/dashboard");
     } catch (err) {
       setError("Failed to create an account");
       console.error(err);
@@ -68,6 +81,24 @@ export function SignUp() {
                 />
               </div>
               <div className="flex flex-col space-y-1.5">
+                <Label htmlFor="displayName">Display Name</Label>
+                <Input
+                  id="displayName"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex flex-col space-y-1.5">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex flex-col space-y-1.5">
                 <Label>Account Type</Label>
                 <RadioGroup
                   defaultValue="business"
@@ -88,14 +119,21 @@ export function SignUp() {
                   <Label htmlFor="businessType">Business Type</Label>
                   <Input
                     id="businessType"
-                    placeholder="e.g., Restaurant, Retail"
+                    value={businessType}
+                    onChange={(e) => setBusinessType(e.target.value)}
+                    required
                   />
                 </div>
               )}
               {userType === "influencer" && (
                 <div className="flex flex-col space-y-1.5">
                   <Label htmlFor="category">Category</Label>
-                  <Input id="category" placeholder="e.g., Fashion, Food" />
+                  <Input
+                    id="category"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    required
+                  />
                 </div>
               )}
             </div>

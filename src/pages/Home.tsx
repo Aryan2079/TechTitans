@@ -13,14 +13,14 @@ export function Home() {
         influencers to collaborate and grow together.
       </p>
       <div className="space-x-4">
-        <Link to="/signup">
+        <Link to="/search">
           <Button size="lg">Get Started</Button>
         </Link>
-        <Link to="/search">
+        {/* <Link to="/search">
           <Button size="lg" variant="outline">
             Explore
           </Button>
-        </Link>
+        </Link> */}
       </div>
     </div>
   );

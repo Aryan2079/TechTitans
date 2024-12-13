@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   User,
@@ -7,13 +9,32 @@ import {
   onAuthStateChanged,
   UserCredential,
 } from "firebase/auth";
-import { auth } from "../firebase/firebase";
+import { auth, db } from "../firebase/firebase";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
 interface AuthContextType {
   currentUser: User | null;
-  signup: (email: string, password: string) => Promise<UserCredential>;
+  userProfile: UserProfile | null;
+  signup: (
+    email: string,
+    password: string,
+    userType: "business" | "influencer",
+    additionalInfo: any
+  ) => Promise<void>;
   login: (email: string, password: string) => Promise<UserCredential>;
   logout: () => Promise<void>;
+  updateProfile: (profileData: Partial<UserProfile>) => Promise<void>;
+}
+
+interface UserProfile {
+  uid: string;
+  email: string;
+  userType: "business" | "influencer";
+  displayName?: string;
+  businessType?: string;
+  category?: string;
+  location?: string;
+  bio?: string; // Make bio optional
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,10 +49,51 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  function signup(email: string, password: string) {
-    return createUserWithEmailAndPassword(auth, email, password);
+  async function signup(
+    email: string,
+    password: string,
+    userType: "business" | "influencer",
+    additionalInfo: {
+      displayName: string;
+      category?: string;
+      businessType?: string;
+      location: string;
+      bio?: string;
+    }
+  ) {
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+    const user = userCredential.user;
+
+    // Ensure category is not undefined
+    const userProfile: UserProfile = {
+      uid: user.uid,
+      email: user.email!,
+      userType,
+      displayName: additionalInfo.displayName,
+      category:
+        userType === "business"
+          ? additionalInfo.businessType || "Not specified"
+          : additionalInfo.category,
+      location: additionalInfo.location,
+      bio: additionalInfo.bio || "", // Optional bio, defaults to an empty string if not provided
+    };
+
+    try {
+      // Set user profile in Firestore
+      await setDoc(doc(db, "userProfiles", user.uid), userProfile);
+
+      // Set local user profile state (if needed)
+      setUserProfile(userProfile);
+    } catch (error) {
+      console.error("Error creating user profile in Firestore: ", error);
+    }
   }
 
   function login(email: string, password: string) {
@@ -42,9 +104,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return signOut(auth);
   }
 
+  async function updateProfile(profileData: Partial<UserProfile>) {
+    if (currentUser) {
+      await updateDoc(doc(db, "userProfiles", currentUser.uid), profileData);
+      setUserProfile((prevProfile) => ({ ...prevProfile!, ...profileData }));
+    }
+  }
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      if (user) {
+        const docRef = doc(db, "userProfiles", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setUserProfile(docSnap.data() as UserProfile);
+        }
+      } else {
+        setUserProfile(null);
+      }
       setLoading(false);
     });
 
@@ -53,9 +131,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     currentUser,
+    userProfile,
     signup,
     login,
     logout,
+    updateProfile,
   };
 
   return (
