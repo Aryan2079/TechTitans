@@ -18,6 +18,7 @@ import { Dashboard } from "./components/Dashboard";
 import FirestoreInitializer from "./components/initializeFirestore";
 import "./App.css";
 import { ChatList } from "./components/ChatList";
+import GenerateImageAndWebsite from "./components/Generate"; // Import the new component
 import { ProtectedRoute } from "./components/ProtectedRoutes";
 
 function App() {
@@ -69,6 +70,16 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ChatList />
+                  </ProtectedRoute>
+                }
+              />
+              {/* Add the new route for the "Generate" page */}
+              <Route
+                path="/generate"
+                element={
+                  <ProtectedRoute>
+                    <GenerateImageAndWebsite />{" "}
+                    {/* Add the new component here */}
                   </ProtectedRoute>
                 }
               />

@@ -16,11 +16,13 @@ export function Home() {
         <Link to="/search">
           <Button size="lg">Get Started</Button>
         </Link>
-        {/* <Link to="/search">
-          <Button size="lg" variant="outline">
-            Explore
-          </Button>
-        </Link> */}
+        {
+          <Link to="/generate">
+            <Button size="lg" variant="outline">
+              Generate
+            </Button>
+          </Link>
+        }
       </div>
     </div>
   );
