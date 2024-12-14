@@ -34,7 +34,6 @@ export function Search() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
 
-  // Fetch userType of the logged-in user
   useEffect(() => {
     const fetchUserType = async () => {
       if (currentUser) {
@@ -50,25 +49,22 @@ export function Search() {
   }, [currentUser]);
 
   const handleSearch = async () => {
-    if (!searchTerm.trim()) return; // Avoid empty searches
+    if (!searchTerm.trim()) return;
 
     setLoading(true);
 
     try {
       const lowerCaseSearchTerm = searchTerm.toLowerCase();
 
-      // Determine the user type to query (opposite of current user)
       const targetUserType =
         currentUserType === "business" ? "influencer" : "business";
 
-      // Fetch all users of the target type
       const usersQuery = query(
         collection(db, "userProfiles"),
         where("userType", "==", targetUserType)
       );
       const userSnapshots = await getDocs(usersQuery);
 
-      // Filter results client-side for partial and case-insensitive matches
       const filteredResults = userSnapshots.docs
         .map((doc) => ({ uid: doc.id, ...doc.data() } as UserProfile))
         .filter((user) => {
@@ -106,9 +102,12 @@ export function Search() {
     });
   };
 
+  const navigateToProfile = (userId: string) => {
+    navigate(`/profile/${userId}`);
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Search Users</h1>
       <div className="flex space-x-4 mb-8">
         <Input
           placeholder="Search by name, category, or bio"
@@ -126,7 +125,10 @@ export function Search() {
           <Card key={result.uid} className="overflow-hidden">
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
-                <Avatar className="h-12 w-12">
+                <Avatar
+                  className="h-12 w-12 cursor-pointer"
+                  onClick={() => navigateToProfile(result.uid)}
+                >
                   <AvatarImage
                     src={`https://api.dicebear.com/6.x/initials/svg?seed=${result.displayName}`}
                   />
@@ -138,7 +140,10 @@ export function Search() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h2 className="text-xl font-semibold">
+                  <h2
+                    className="text-xl font-semibold cursor-pointer hover:underline"
+                    onClick={() => navigateToProfile(result.uid)}
+                  >
                     {result.displayName}
                   </h2>
                   <p className="text-sm text-gray-500">{result.userType}</p>

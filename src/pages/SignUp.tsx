@@ -10,7 +10,6 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  //   CardFooter,
 } from "../components/ui/card";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -22,6 +21,7 @@ export function SignUp() {
   const [businessType, setBusinessType] = useState("");
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
+  const [bio, setBio] = useState(""); // Add bio state
   const [error, setError] = useState("");
   const { signup } = useAuth();
   const navigate = useNavigate();
@@ -33,8 +33,9 @@ export function SignUp() {
     try {
       const additionalInfo =
         userType === "business"
-          ? { displayName, businessType, location }
-          : { displayName, category, location };
+          ? { displayName, businessType, location, bio }
+          : { displayName, category, location, bio };
+
       await signup(
         email,
         password,
@@ -136,6 +137,16 @@ export function SignUp() {
                   />
                 </div>
               )}
+              <div className="flex flex-col space-y-1.5">
+                <Label htmlFor="bio">Bio</Label>
+                <Input
+                  id="bio"
+                  placeholder="Tell us about yourself"
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  required
+                />
+              </div>
             </div>
             {error && <p className="text-red-500 mt-4">{error}</p>}
             <Button className="w-full mt-4" type="submit">

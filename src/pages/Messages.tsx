@@ -48,6 +48,10 @@ export function Messages() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const navigateToProfile = (userId: string) => {
+    navigate(`/profile/${userId}`);
+  };
+
   useEffect(() => {
     const fetchOtherUser = async () => {
       if (chatId && currentUser) {
@@ -70,7 +74,7 @@ export function Messages() {
     if (!selectedUser) {
       fetchOtherUser();
     } else {
-      setOtherUser(selectedUser); // Ensure `otherUser` is populated if passed via state
+      setOtherUser(selectedUser);
     }
   }, [chatId, currentUser, selectedUser]);
 
@@ -102,7 +106,6 @@ export function Messages() {
       const chatDoc = await getDoc(chatRef);
 
       if (!chatDoc.exists()) {
-        // Create chat if it doesn't exist
         await setDoc(chatRef, {
           participants: [currentUser.uid, otherUser.uid],
           lastMessage: messageText,
@@ -113,14 +116,12 @@ export function Messages() {
           },
         });
       } else {
-        // Update the last message and timestamp in the chat document
         await updateDoc(chatRef, {
           lastMessage: messageText,
           timestamp: Timestamp.now(),
         });
       }
 
-      // Add the new message to the messages collection
       const newMessage = {
         text: messageText,
         timestamp: Timestamp.now(),
@@ -176,7 +177,12 @@ export function Messages() {
                   .join("")}
               </AvatarFallback>
             </Avatar>
-            <h1 className="text-2xl font-bold">{otherUser.displayName}</h1>
+            <h1
+              className="text-2xl font-bold cursor-pointer hover:underline"
+              onClick={() => navigateToProfile(otherUser.uid)}
+            >
+              {otherUser.displayName}
+            </h1>
           </>
         )}
       </div>

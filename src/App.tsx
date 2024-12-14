@@ -3,7 +3,7 @@ import {
   BrowserRouter as Router,
   Route,
   Routes,
-  Navigate,
+  // Navigate,
 } from "react-router-dom";
 import { Navbar } from "./components/Navbar";
 import { Home } from "./pages/Home";
@@ -11,18 +11,14 @@ import { SignUp } from "./pages/SignUp";
 import { Login } from "./pages/Login";
 import { Search } from "./pages/Search";
 import { Messages } from "./pages/Messages";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import { Profile } from "./pages/Profile";
 import { Dashboard } from "./components/Dashboard";
 
 import FirestoreInitializer from "./components/initializeFirestore";
 import "./App.css";
 import { ChatList } from "./components/ChatList";
-
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useAuth();
-  return currentUser ? <>{children}</> : <Navigate to="/login" />;
-}
+import { ProtectedRoute } from "./components/ProtectedRoutes";
 
 function App() {
   return (
@@ -45,7 +41,7 @@ function App() {
                 }
               />
               <Route
-                path="/profile"
+                path="/profile/:userId?"
                 element={
                   <ProtectedRoute>
                     <Profile />
@@ -61,7 +57,7 @@ function App() {
                 }
               />
               <Route
-                path="/messages/:chatId" // This now dynamically accepts the user ID
+                path="/messages/:chatId"
                 element={
                   <ProtectedRoute>
                     <Messages />
