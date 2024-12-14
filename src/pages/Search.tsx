@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardFooter } from "../components/ui/card";
@@ -9,8 +9,8 @@ import {
   query,
   where,
   getDocs,
-  getDoc,
   doc,
+  getDoc,
   setDoc,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
@@ -22,37 +22,66 @@ interface UserProfile {
   userType: string;
   category: string;
   location: string;
+  bio: string;
 }
 
 export function Search() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentUserType, setCurrentUserType] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const { currentUser } = useAuth();
 
+  // Fetch userType of the logged-in user
+  useEffect(() => {
+    const fetchUserType = async () => {
+      if (currentUser) {
+        const userRef = doc(db, "userProfiles", currentUser.uid);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setCurrentUserType(userData?.userType || null);
+        }
+      }
+    };
+    fetchUserType();
+  }, [currentUser]);
+
   const handleSearch = async () => {
+    if (!searchTerm.trim()) return; // Avoid empty searches
+
     setLoading(true);
 
-    const q = query(
-      collection(db, "userProfiles"),
-      where("displayName", ">=", searchTerm),
-      where("displayName", "<=", searchTerm + "\uf8ff")
-    );
-
     try {
-      const querySnapshot = await getDocs(q);
-      const results: UserProfile[] = [];
-      querySnapshot.forEach((doc) => {
-        const userData = doc.data() as UserProfile;
-        if (userData.uid !== currentUser?.uid) {
-          results.push(userData);
-        }
-      });
-      setSearchResults(results);
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+
+      // Determine the user type to query (opposite of current user)
+      const targetUserType =
+        currentUserType === "business" ? "influencer" : "business";
+
+      // Fetch all users of the target type
+      const usersQuery = query(
+        collection(db, "userProfiles"),
+        where("userType", "==", targetUserType)
+      );
+      const userSnapshots = await getDocs(usersQuery);
+
+      // Filter results client-side for partial and case-insensitive matches
+      const filteredResults = userSnapshots.docs
+        .map((doc) => ({ uid: doc.id, ...doc.data() } as UserProfile))
+        .filter((user) => {
+          return (
+            user.displayName?.toLowerCase().includes(lowerCaseSearchTerm) ||
+            user.category?.toLowerCase().includes(lowerCaseSearchTerm) ||
+            user.bio?.toLowerCase().includes(lowerCaseSearchTerm)
+          );
+        });
+
+      setSearchResults(filteredResults);
     } catch (error) {
-      console.error("Error searching users: ", error);
+      console.error("Error fetching search results:", error);
     }
 
     setLoading(false);
@@ -61,22 +90,17 @@ export function Search() {
   const handleContactClick = async (user: UserProfile) => {
     if (!currentUser) return;
 
-    // Create a unique chat ID
     const chatId = [currentUser.uid, user.uid].sort().join("_");
-
-    // Check if the chat already exists
     const chatRef = doc(db, "chats", chatId);
     const chatDoc = await getDoc(chatRef);
 
     if (!chatDoc.exists()) {
-      // If the chat doesn't exist, create it
       await setDoc(chatRef, {
         participants: [currentUser.uid, user.uid],
         createdAt: new Date(),
       });
     }
 
-    // Navigate to the messages component with chat ID and user data
     navigate(`/messages/${chatId}`, {
       state: { user: user },
     });
@@ -87,7 +111,7 @@ export function Search() {
       <h1 className="text-3xl font-bold mb-6">Search Users</h1>
       <div className="flex space-x-4 mb-8">
         <Input
-          placeholder="Search by name, category, or location"
+          placeholder="Search by name, category, or bio"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-grow"
@@ -128,6 +152,9 @@ export function Search() {
                 <p className="text-sm">
                   <span className="font-medium">Location:</span>{" "}
                   {result.location}
+                </p>
+                <p className="text-sm">
+                  <span className="font-medium">Bio:</span> {result.bio}
                 </p>
               </div>
             </CardContent>
